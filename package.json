@@ -1,0 +1,26 @@
+{
+  "name": "statistic_bot",
+  "version": "1.0.0",
+  "description": "statistic tg",
+  "main": "statistic_bot.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc && nodemon statistics_bot.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "ilnazonn",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "grammy": "^1.34.0",
+    "node-telegram-bot-api": "^0.66.0",
+    "telegraf": "^4.16.3",
+    "telegram": "^2.26.16",
+    "telegram-mtproto": "^1.0.5"
+  },
+  "devDependencies": {
+    "@types/node-telegram-bot-api": "^0.64.7",
+    "nodemon": "^3.1.9"
+  }
+}
