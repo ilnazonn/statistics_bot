@@ -66,7 +66,7 @@ const replyWithoutCounting = async (ctx: Context, text: string, options?: any) =
 let lastDate = ''; // Переменная для хранения даты последнего обновления
 
 // Загрузка состояния из файла
-const path = 'statistics.json'; // Используем JSON для хранения состояния
+ const path = 'statistics.json'; // Используем JSON для хранения состояния
 const loadState = () => {
     if (fs.existsSync(path)) {
         const data = fs.readFileSync(path, 'utf-8');
