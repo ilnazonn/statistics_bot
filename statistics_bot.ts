@@ -223,7 +223,7 @@ const saveFullStatisticsToFile = async (messageInfo: MessageInfo) => {
 // Обработка бизнес сообщений:
 bot.on('business_message', async (ctx: Context) => {
     const businessMessage = ctx.update.business_message;
-    console.log(ctx.update.business_message);
+//    console.log(ctx.update.business_message);
     const user = businessMessage ? businessMessage.from : null;
 
     if (businessMessage && (
@@ -252,7 +252,7 @@ bot.on('business_message', async (ctx: Context) => {
 // Объединяем дату и время с пробелом
         const timestamp = `${datePart} ${timePart}`;
 
-        console.log(`Получено бизнес-сообщение от ${username}: ${businessMessage.text}`);
+//        console.log(`Получено бизнес-сообщение от ${username}: ${businessMessage.text}`);
 
         const chat = ctx.chat;
         if (!chat) {
@@ -264,7 +264,7 @@ bot.on('business_message', async (ctx: Context) => {
         let direction = 'Входящие'; // По умолчанию считаем, что сообщение входящее
         if (username === mainUser) {
             outgoingMessageCount++;
-            console.log(`Счетчик исходящих сообщений увеличен: ${outgoingMessageCount}`);
+    //        console.log(`Счетчик исходящих сообщений увеличен: ${outgoingMessageCount}`);
             direction = 'Исходящие'; // Если сообщение от mainUser, то оно исходящее
         } else {
             messageCount++;
@@ -282,7 +282,7 @@ bot.on('business_message', async (ctx: Context) => {
             direction: direction,
             timestamp: timestamp
         };
-        console.log(messageInfo);
+    //    console.log(messageInfo);
         await saveFullStatisticsToFile(messageInfo);
     }
 });
@@ -295,7 +295,7 @@ bot.on('business_message', async (ctx: Context) => {
 // Обработка текстовых сообщений
 bot.on('message', async (ctx) => {
     if (ctx.chat && ctx.chat.id === excludedChatId) return;
-    console.log(ctx.message);
+//    console.log(ctx.message);
     const user = ctx.from;
     const username = user ? user.username || user.first_name : 'Неизвестный пользователь';
     const date = new Date();
@@ -330,7 +330,7 @@ bot.on('message', async (ctx) => {
     // Если текст равен undefined, но есть caption, используем caption
  //   const messageText = ctx.message.text !== undefined ? ctx.message.text : ctx.message.caption;
 
-    console.log(`Получено текстовое сообщение от ${username}: ${ctx.message.text}`);
+//    console.log(`Получено текстовое сообщение от ${username}: ${ctx.message.text}`);
 
     const chat = ctx.chat; // Сохраняем ссылку на chat для проверки
     if (!chat) {
@@ -343,13 +343,13 @@ bot.on('message', async (ctx) => {
     let direction = 'Входящие'; // По умолчанию считаем входящие
     if (username === mainUser) {
         outgoingMessageCount++;
-        console.log(`Счетчик исходящих сообщений увеличен: ${outgoingMessageCount}`);
+//        console.log(`Счетчик исходящих сообщений увеличен: ${outgoingMessageCount}`);
         direction = 'Исходящие'; // Если сообщение от mainUser, меняем направление
     } else {
         messageCount++;
         if (chat.type === 'group' || chat.type === 'supergroup') {
             groupMessageCount++;
-            console.log(`Счетчик групповых сообщений увеличен: ${groupMessageCount}`);
+//            console.log(`Счетчик групповых сообщений увеличен: ${groupMessageCount}`);
         }
     }
 
@@ -362,7 +362,7 @@ bot.on('message', async (ctx) => {
         direction: direction, // Указываем направление
         timestamp: timestamp
     };
-    console.log(messageInfo);
+//    console.log(messageInfo);
     await saveFullStatisticsToFile(messageInfo);
 });
 
