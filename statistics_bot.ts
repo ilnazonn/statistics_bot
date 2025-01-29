@@ -52,6 +52,7 @@ bot.hears('🗳️ Статистика по сообщениям', async (ctx) 
 
     try {
         const files = fs.readdirSync(reportsDir)
+            .filter(file => path.extname(file) === '.csv') // Фильтруем только CSV файлы
             .map(file => ({ name: file, time: fs.statSync(path.join(reportsDir, file)).mtime.getTime() }))
             .sort((a, b) => b.time - a.time) // Сортировка по дате изменения (сначала новые)
             .slice(0, 2) // Берем последние 2 файла
