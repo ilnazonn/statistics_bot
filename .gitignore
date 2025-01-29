@@ -3,6 +3,8 @@ node_modules
 .idea
 full_statistics.txt
 statistics.json
-statistics.txt
+statistics.csv
 statistics_bot.js
 nodemon.json
+full_statistics_2025-01.csv
+full_statistics_2025-02.csv

@@ -1,5 +1,6 @@
 import { Bot, Context, Keyboard, InputFile} from 'grammy'; // Импортируем библиотеку grammy
 import fs from 'fs'; // Импортируем модуль для работы с файловой системой
+import path from 'path';
 import dotenv from 'dotenv';
 // Загрузить переменные окружения из файла .env
 dotenv.config();
@@ -32,7 +33,7 @@ bot.command('start', async (ctx) => {
     });
 });
 bot.hears('📤 Общая статистика', async (ctx) => {
-    const inputFile = new InputFile('./statistics.txt'); // Убедитесь, что путь к файлу правильный
+    const inputFile = new InputFile('./statistics.csv'); // Убедитесь, что путь к файлу правильный
 
     try {
         // Отправляем файл вместе с текстовым уведомлением
@@ -45,14 +46,31 @@ bot.hears('📤 Общая статистика', async (ctx) => {
     return; // Не считаем это сообщение как входящее
 });
 
+
 bot.hears('🗳️ Статистика по сообщениям', async (ctx) => {
-    const inputFile = new InputFile('./full_statistics.txt'); // Убедитесь, что путь к файлу правильный
+    const reportsDir = './reports'; // Путь к папке с отчетами
+
     try {
-        // Отправляем файл вместе с текстовым уведомлением
-        await ctx.replyWithDocument(inputFile, { caption: 'Ваш файл со статистикой' });
+        const files = fs.readdirSync(reportsDir)
+            .map(file => ({ name: file, time: fs.statSync(path.join(reportsDir, file)).mtime.getTime() }))
+            .sort((a, b) => b.time - a.time) // Сортировка по дате изменения (сначала новые)
+            .slice(0, 2) // Берем последние 2 файла
+            .map(file => path.join(reportsDir, file.name));
+
+        if (files.length === 0) {
+            await ctx.reply('В папке reports нет файлов для отправки.');
+            return;
+        }
+
+        // Отправка каждого файла
+        for (const file of files) {
+            const inputFile = new InputFile(file);
+            await ctx.replyWithDocument(inputFile, { caption: `Ваш файл со статистикой: ${path.basename(file)}` });
+        }
+
     } catch (error) {
-        console.error('Ошибка при отправке файла:', error);
-        await ctx.reply('Произошла ошибка при попытке отправить файл. Пожалуйста, попробуйте позже.');
+        console.error('Ошибка при отправке файлов:', error);
+        await ctx.reply('Произошла ошибка при попытке отправить файлы. Пожалуйста, попробуйте позже.');
     }
 
     return; // Не считаем это сообщение как входящее
@@ -66,11 +84,11 @@ const replyWithoutCounting = async (ctx: Context, text: string, options?: any) =
 let lastDate = ''; // Переменная для хранения даты последнего обновления
 
 // Загрузка состояния из файла
-const path = 'statistics.json'; // Используем JSON для хранения состояния
+const filePath = 'statistics.json'; // Используем JSON для хранения состояния
 
 const loadState = () => {
-    if (fs.existsSync(path)) {
-        const data = fs.readFileSync(path, 'utf-8');
+    if (fs.existsSync(filePath)) {
+        const data = fs.readFileSync(filePath, 'utf-8');
         const state = JSON.parse(data);
         messageCount = state.messageCount || 0;
         outgoingMessageCount = state.outgoingMessageCount || 0;
@@ -84,7 +102,7 @@ const loadState = () => {
             groupMessageCount: 0,
             lastDate: ''
         };
-        fs.writeFileSync(path, JSON.stringify(initialState));
+        fs.writeFileSync(filePath, JSON.stringify(initialState));
         // Устанавливаем значения переменных по умолчанию
         messageCount = initialState.messageCount;
         outgoingMessageCount = initialState.outgoingMessageCount;
@@ -104,9 +122,9 @@ const saveState = () => {
         groupMessageCount,
         lastDate
     };
-    fs.writeFileSync(path, JSON.stringify(state), 'utf-8');
+    fs.writeFileSync(filePath, JSON.stringify(state), 'utf-8');
 };
-
+let headerAdded = false;
 const saveStatisticsToFile = async () => {
     const currentDate = new Date().toLocaleDateString('ru-RU');
 
@@ -122,20 +140,24 @@ const saveStatisticsToFile = async () => {
     let foundToday = false;
     let statsContent = ''; // Содержимое для записи в файл
 
-    // console.log(`Текущие значения счетчиков:
-    // Входящие сообщения: ${messageCount},
-    // Исходящие сообщения: ${outgoingMessageCount},
-    // Групповые сообщения: ${groupMessageCount}`);
+//     console.log(`Текущие значения счетчиков:
+//     Входящие сообщения: ${messageCount},
+//     Исходящие сообщения: ${outgoingMessageCount},
+//     Групповые сообщения: ${groupMessageCount}`);
 
     // Проверяем, существует ли файл для статистики
-    if (fs.existsSync('statistics.txt')) {
-        const fileContent = fs.readFileSync('statistics.txt', 'utf8');
+    if (fs.existsSync('statistics.csv')) {
+        const fileContent = fs.readFileSync('statistics.csv', 'utf8');
         const lines = fileContent.split('\n').filter(line => line.trim() !== '');
 
-        // Добавляем заголовок только если файл пуст
-        if (lines.length === 0) {
-            statsContent += 'Дата,Количество входящих сообщений,Количество исходящих сообщений,Количество групповых сообщений\n';
+// Добавляем заголовок только если файл пуст или заголовок отсутствует
+        if (lines.length === 0 || !statsContent.includes('Дата,Количество входящих сообщений,Количество исходящих сообщений,Количество групповых сообщений')) {
+            if (!headerAdded) { // Проверяем, был ли добавлен заголовок
+                statsContent += 'Дата,Количество входящих сообщений,Количество исходящих сообщений,Количество групповых сообщений\n';
+                headerAdded = true; // Устанавливаем, что заголовок добавлен
+            }
         }
+
 
         for (let i = 0; i < lines.length; i++) {
             if (lines[i].includes(currentDate)) {
@@ -159,7 +181,7 @@ const saveStatisticsToFile = async () => {
 
 
     // Записываем обновленное содержимое в файл
-    fs.writeFileSync('statistics.txt', statsContent.trim(), 'utf8');
+    fs.writeFileSync('statistics.csv', statsContent.trim(), 'utf8');
 
     // Сохраняем текущее состояние
     saveState();
@@ -176,29 +198,40 @@ setInterval(async () => {
 
 // Сохранение полной статистики:
 const saveFullStatisticsToFile = async (messageInfo: MessageInfo) => {
-    const statsContent = `${messageInfo.user_id},${messageInfo.user_name},${messageInfo.group_id},${messageInfo.group_name},${messageInfo.direction}, ${messageInfo.timestamp}\n`;
+    const currentDate = new Date();
+    const year = currentDate.getFullYear();
+    const month = String(currentDate.getMonth() + 1).padStart(2, '0'); // Месяцы начинаются с 0
+    const filePath = path.join('reports', `full_statistics_${year}-${month}.csv`);
 
-    // Проверяем, существует ли файл для полной статистики
-    if (fs.existsSync('full_statistics.txt')) {
+    const statsContent = `${messageInfo.user_id},${messageInfo.user_name},${messageInfo.group_id},${messageInfo.group_name},${messageInfo.direction},${messageInfo.timestamp}\n`;
+
+    // Проверяем, существует ли файл для текущего месяца
+    if (fs.existsSync(filePath)) {
         // Записываем информацию в конец файла
-        fs.appendFileSync('full_statistics.txt', statsContent, 'utf8');
+        fs.appendFileSync(filePath, statsContent, 'utf8');
     } else {
         // Если файл не существует, создаем его и добавляем заголовок
         const header = 'User ID,User Name,Group ID,Group Name,Direction,Timestamp\n';
-        fs.writeFileSync('full_statistics.txt', header + statsContent, 'utf8');
+        fs.writeFileSync(filePath, header + statsContent, 'utf8');
     }
 
-//    console.log('Полная статистика успешно сохранена в файл full_statistics.txt');
+    // console.log('Полная статистика успешно сохранена в файл' + filePath);
 };
-
 
 
 // Обработка бизнес сообщений:
 bot.on('business_message', async (ctx: Context) => {
     const businessMessage = ctx.update.business_message;
+    console.log(ctx.update.business_message);
     const user = businessMessage ? businessMessage.from : null;
 
-    if (businessMessage && 'text' in businessMessage) {
+    if (businessMessage && (
+        ('caption' in businessMessage && ('video' in businessMessage || 'photo' in businessMessage)) // caption с video или photo
+        || ('text' in businessMessage) // Или наличие текста
+        || ('voice' in businessMessage) // Или наличие голосового сообщения
+        || ('sticker' in businessMessage) // Или наличие голосового сообщения
+        || ('video' in businessMessage || 'photo' in businessMessage) // Или наличие видео или фото без caption
+    )) {
         const username = user ? user.username || user.first_name : 'Неизвестный пользователь';
         const date = new Date();
 
@@ -218,7 +251,7 @@ bot.on('business_message', async (ctx: Context) => {
 // Объединяем дату и время с пробелом
         const timestamp = `${datePart} ${timePart}`;
 
-//        console.log(`Получено бизнес-сообщение от ${username}: ${businessMessage.text}`);
+        console.log(`Получено бизнес-сообщение от ${username}: ${businessMessage.text}`);
 
         const chat = ctx.chat;
         if (!chat) {
@@ -230,7 +263,7 @@ bot.on('business_message', async (ctx: Context) => {
         let direction = 'Входящие'; // По умолчанию считаем, что сообщение входящее
         if (username === mainUser) {
             outgoingMessageCount++;
-    //        console.log(`Счетчик исходящих сообщений увеличен: ${outgoingMessageCount}`);
+            console.log(`Счетчик исходящих сообщений увеличен: ${outgoingMessageCount}`);
             direction = 'Исходящие'; // Если сообщение от mainUser, то оно исходящее
         } else {
             messageCount++;
@@ -248,7 +281,7 @@ bot.on('business_message', async (ctx: Context) => {
             direction: direction,
             timestamp: timestamp
         };
-    //    console.log(messageInfo);
+        console.log(messageInfo);
         await saveFullStatisticsToFile(messageInfo);
     }
 });
@@ -259,9 +292,9 @@ bot.on('business_message', async (ctx: Context) => {
 
 
 // Обработка текстовых сообщений
-bot.on('message:text', async (ctx) => {
+bot.on('message', async (ctx) => {
     if (ctx.chat && ctx.chat.id === excludedChatId) return;
-
+    console.log(ctx.message);
     const user = ctx.from;
     const username = user ? user.username || user.first_name : 'Неизвестный пользователь';
     const date = new Date();
@@ -287,8 +320,16 @@ bot.on('message:text', async (ctx) => {
         await replyWithoutCounting(ctx, `Дата и время: ${dateTime}\n- Количество входящих сообщений: ${messageCount}\n- Количество исходящих сообщений: ${outgoingMessageCount}\n- Количество групповых сообщений: ${groupMessageCount}`);
         return;
     }
+// // Игнорируем сообщения, где текст равен undefined, но учитываем caption
+//     if (ctx.message.text === undefined && !ctx.message.caption && !ctx.message.voice) {
+//         console.log(`Игнорируем сообщение от ${username}: undefined и отсутствует caption`);
+//         return; // Выход из функции, если текст undefined и нет caption
+//     }
 
-//    console.log(`Получено текстовое сообщение от ${username}: ${ctx.message.text}`);
+    // Если текст равен undefined, но есть caption, используем caption
+ //   const messageText = ctx.message.text !== undefined ? ctx.message.text : ctx.message.caption;
+
+    console.log(`Получено текстовое сообщение от ${username}: ${ctx.message.text}`);
 
     const chat = ctx.chat; // Сохраняем ссылку на chat для проверки
     if (!chat) {
@@ -296,17 +337,18 @@ bot.on('message:text', async (ctx) => {
         return; // Выход из функции, если chat не определён
     }
 
+
     // Определяем направление сообщения
     let direction = 'Входящие'; // По умолчанию считаем входящие
     if (username === mainUser) {
         outgoingMessageCount++;
-//        console.log(`Счетчик исходящих сообщений увеличен: ${outgoingMessageCount}`);
+        console.log(`Счетчик исходящих сообщений увеличен: ${outgoingMessageCount}`);
         direction = 'Исходящие'; // Если сообщение от mainUser, меняем направление
     } else {
         messageCount++;
         if (chat.type === 'group' || chat.type === 'supergroup') {
             groupMessageCount++;
-//            console.log(`Счетчик групповых сообщений увеличен: ${groupMessageCount}`);
+            console.log(`Счетчик групповых сообщений увеличен: ${groupMessageCount}`);
         }
     }
 
@@ -319,7 +361,7 @@ bot.on('message:text', async (ctx) => {
         direction: direction, // Указываем направление
         timestamp: timestamp
     };
-//    console.log(messageInfo);
+    console.log(messageInfo);
     await saveFullStatisticsToFile(messageInfo);
 });
 
