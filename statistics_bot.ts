@@ -179,7 +179,7 @@ const saveStatisticsToFile = async () => {
     // Записываем обновленное содержимое в файл
     fs.writeFileSync('reports/statistics.csv', statsContent.trim(), 'utf8');
     // Архивация файла statistic
-    const MAX_FILE_SIZE = 5 * 1024; // 5 КБ в байтах
+    const MAX_FILE_SIZE = 500 * 1024; // 5 КБ в байтах
     const statsFilePath = 'reports/statistics.csv';
 
 // Проверяем, существует ли файл
