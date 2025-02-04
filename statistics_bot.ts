@@ -2,6 +2,7 @@ import { Bot, Context, Keyboard, InputFile} from 'grammy'; // Импортиру
 import fs from 'fs'; // Импортируем модуль для работы с файловой системой
 import path from 'path';
 import dotenv from 'dotenv';
+import zlib from 'zlib';
 // Загрузить переменные окружения из файла .env
 dotenv.config();
 const token = process.env.BOT_TOKEN;
@@ -33,7 +34,7 @@ bot.command('start', async (ctx) => {
     });
 });
 bot.hears('📤 Общая статистика', async (ctx) => {
-    const inputFile = new InputFile('./statistics.csv'); // Убедитесь, что путь к файлу правильный
+    const inputFile = new InputFile('reports/statistics.csv'); // Убедитесь, что путь к файлу правильный
 
     try {
         // Отправляем файл вместе с текстовым уведомлением
@@ -52,7 +53,7 @@ bot.hears('🗳️ Статистика по сообщениям', async (ctx) 
 
     try {
         const files = fs.readdirSync(reportsDir)
-            .filter(file => path.extname(file) === '.csv') // Фильтруем только CSV файлы
+            .filter(file => path.extname(file) === '.csv' && file.startsWith('full')) // Фильтруем только CSV файлы, начинающиеся с 'full'
             .map(file => ({ name: file, time: fs.statSync(path.join(reportsDir, file)).mtime.getTime() }))
             .sort((a, b) => b.time - a.time) // Сортировка по дате изменения (сначала новые)
             .slice(0, 2) // Берем последние 2 файла
@@ -125,7 +126,7 @@ const saveState = () => {
     };
     fs.writeFileSync(filePath, JSON.stringify(state), 'utf-8');
 };
-let headerAdded = false;
+
 const saveStatisticsToFile = async () => {
     const currentDate = new Date().toLocaleDateString('ru-RU');
 
@@ -137,56 +138,99 @@ const saveStatisticsToFile = async () => {
         groupMessageCount = 0;
     }
 
-//    console.log(`Текущая дата (currentDate): ${currentDate}, Последняя дата (lastDate): ${lastDate}`);
-    let foundToday = false;
     let statsContent = ''; // Содержимое для записи в файл
-
-//     console.log(`Текущие значения счетчиков:
-//     Входящие сообщения: ${messageCount},
-//     Исходящие сообщения: ${outgoingMessageCount},
-//     Групповые сообщения: ${groupMessageCount}`);
+    let foundToday = false;
 
     // Проверяем, существует ли файл для статистики
-    if (fs.existsSync('statistics.csv')) {
-        const fileContent = fs.readFileSync('statistics.csv', 'utf8');
+    if (fs.existsSync('reports/statistics.csv')) {
+        const fileContent = fs.readFileSync('reports/statistics.csv', 'utf8');
         const lines = fileContent.split('\n').filter(line => line.trim() !== '');
 
-// Добавляем заголовок только если файл пуст или заголовок отсутствует
-        if (lines.length === 0 || !statsContent.includes('Дата,Количество входящих сообщений,Количество исходящих сообщений,Количество групповых сообщений')) {
-            if (!headerAdded) { // Проверяем, был ли добавлен заголовок
-                statsContent += 'Дата,Количество входящих сообщений,Количество исходящих сообщений,Количество групповых сообщений\n';
-                headerAdded = true; // Устанавливаем, что заголовок добавлен
-            }
+        // Проверяем, есть ли заголовок в первой строке файла
+        if (lines.length === 0 || lines[0] !== 'Дата,Количество входящих сообщений,Количество исходящих сообщений,Количество групповых сообщений') {
+            // Добавляем заголовок, если файл пуст или заголовок отсутствует
+            statsContent += 'Дата,Количество входящих сообщений,Количество исходящих сообщений,Количество групповых сообщений\n';
         }
 
-
-        for (let i = 0; i < lines.length; i++) {
-            if (lines[i].includes(currentDate)) {
-                foundToday = true;
-                // Формируем обновленное содержимое
+        // Обрабатываем строки файла
+        for (const line of lines) {
+            if (line.includes(currentDate)) {
+                // Обновляем строку с текущей датой
                 statsContent += `${currentDate},${messageCount},${outgoingMessageCount},${groupMessageCount}\n`;
-
-                break;
+                foundToday = true;
             } else {
-                // Добавляем все остальные строки
-                statsContent += lines[i] + '\n';
+                // Добавляем остальные строки (кроме заголовка)
+                statsContent += line + '\n';
             }
         }
+    } else {
+        // Если файл не существует, добавляем заголовок
+        statsContent += 'Дата,Количество входящих сообщений,Количество исходящих сообщений,Количество групповых сообщений\n';
     }
 
-// Если записи за сегодня не было или день изменился
-    if (!foundToday || lastDate !== currentDate) {
+    // Если записи за сегодня не было, добавляем новую строку
+    if (!foundToday) {
         statsContent += `${currentDate},${messageCount},${outgoingMessageCount},${groupMessageCount}\n`;
     }
 
-
+    // Проверка перед записью в файл
+    console.log('Содержимое для записи в файл:\n' + statsContent.trim()); // Лог содержимое перед записью
 
     // Записываем обновленное содержимое в файл
-    fs.writeFileSync('statistics.csv', statsContent.trim(), 'utf8');
+    fs.writeFileSync('reports/statistics.csv', statsContent.trim(), 'utf8');
+    // Архивация файла statistic
+    const MAX_FILE_SIZE = 5 * 1024; // 5 КБ в байтах
+    const statsFilePath = 'reports/statistics.csv';
+
+// Проверяем, существует ли файл
+    if (!fs.existsSync(statsFilePath)) {
+        console.error(`Файл ${statsFilePath} не существует.`);
+        process.exit(1);
+    }
+
+
+    try {
+        const fileStats = fs.statSync(statsFilePath);
+
+        if (fileStats.size > MAX_FILE_SIZE) {
+            const gzip = zlib.createGzip();
+            const source = fs.createReadStream(statsFilePath);
+
+            // Архивируем с добавлением текущей даты в имя архива
+            const archiveFilePath = `statistics_${currentDate.replace(/\./g, '-')}.csv.gz`;
+
+            const destination = fs.createWriteStream(archiveFilePath);
+
+            // Обработка ошибок при чтении исходного файла
+            source.on('error', (err) => {
+                console.error('Ошибка при чтении файла:', err);
+            });
+
+            // Обработка ошибок при записи в архив
+            destination.on('error', (err) => {
+                console.error('Ошибка при записи архива:', err);
+            });
+
+            // Архивируем файл
+            source.pipe(gzip).pipe(destination);
+
+            // Удаляем оригинальный файл после успешного архивирования
+            destination.on('finish', () => {
+                console.log(`Файл успешно архивирован: ${archiveFilePath}`);
+                fs.unlinkSync(statsFilePath);
+                console.log(`Оригинальный файл удален: ${statsFilePath}`);
+            });
+        } else {
+            console.log('Размер файла не превышает лимит, архивация не требуется.');
+        }
+    } catch (err) {
+        console.error('Ошибка при обработке файла:', err);
+    }
 
     // Сохраняем текущее состояние
     saveState();
 };
+
 
 // Загружаем состояние при старте приложения
 loadState();
@@ -196,6 +240,8 @@ setInterval(async () => {
 //    console.log(`Функция сохранения статистики запущена в ${new Date().toISOString()}`);
     await saveStatisticsToFile();
 }, 10_000);
+
+
 
 // Сохранение полной статистики:
 const saveFullStatisticsToFile = async (messageInfo: MessageInfo) => {
@@ -231,7 +277,7 @@ bot.on('business_message', async (ctx: Context) => {
         || ('text' in businessMessage) // Или наличие текста
         || ('voice' in businessMessage) // Или наличие голосового сообщения
         || ('sticker' in businessMessage) // Или наличие голосового сообщения
-        || ('video' in businessMessage || 'photo' in businessMessage) // Или наличие видео или фото без caption
+        || ('video' in businessMessage || 'photo' in businessMessage) // Или наличие видео, или фото без caption
     )) {
         const username = user ? user.username || user.first_name : 'Неизвестный пользователь';
         const date = new Date();
