@@ -174,7 +174,7 @@ const saveStatisticsToFile = async () => {
     }
 
     // Проверка перед записью в файл
-    console.log('Содержимое для записи в файл:\n' + statsContent.trim()); // Лог содержимое перед записью
+//    console.log('Содержимое для записи в файл:\n' + statsContent.trim()); // Лог содержимое перед записью
 
     // Записываем обновленное содержимое в файл
     fs.writeFileSync('reports/statistics.csv', statsContent.trim(), 'utf8');
@@ -221,7 +221,7 @@ const saveStatisticsToFile = async () => {
                 console.log(`Оригинальный файл удален: ${statsFilePath}`);
             });
         } else {
-            console.log('Размер файла не превышает лимит, архивация не требуется.');
+    //        console.log('Размер файла не превышает лимит, архивация не требуется.');
         }
     } catch (err) {
         console.error('Ошибка при обработке файла:', err);
