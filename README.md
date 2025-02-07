@@ -7,4 +7,4 @@
    BOT_TOKEN=ваш токен
    YOUR_TG=имя пользователя тг
 5. После успешной загрузки выполняем npm run build
-6. Запускаем pm2 start statistics_bot.js
+6. Запускаем pm2 start dist/statistics_bot.js --name "statistics_bot" --env .env
