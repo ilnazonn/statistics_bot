@@ -4,7 +4,7 @@ node_modules
 full_statistics.txt
 statistics.json
 statistics.csv
-statistics_bot.js
+src/statistics_bot.js
 nodemon.json
 full_statistics_2025-01.csv
 full_statistics_2025-02.csv

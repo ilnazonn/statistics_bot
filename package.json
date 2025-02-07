@@ -2,12 +2,13 @@
   "name": "statistic_bot",
   "version": "1.0.0",
   "description": "statistic tg",
-  "main": "statistic_bot.js",
+  "main": "dist/statistic_bot.js",
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "dev": "tsc && nodemon statistics_bot.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "tsc && nodemon src/statistics_bot.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node dist/statistics_bot.js"
   },
   "author": "ilnazonn",
   "license": "ISC",
