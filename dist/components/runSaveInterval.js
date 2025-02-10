@@ -9,6 +9,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 import { saveStatisticsToFile } from "./saveStatistics.js";
 setInterval(() => __awaiter(void 0, void 0, void 0, function* () {
-    console.log(`Функция сохранения статистики запущена в ${new Date().toISOString()}`);
+    //    console.log(`Функция сохранения статистики запущена в ${new Date().toISOString()}`);
     yield saveStatisticsToFile();
 }), 10000);

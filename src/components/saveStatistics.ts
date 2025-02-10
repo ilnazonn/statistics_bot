@@ -1,10 +1,12 @@
-import {statisticsManager} from "./statisticsManager.js";
+import { statisticsManager } from "./statisticsManager.js";
 import fs from "fs";
 import zlib from "zlib";
 import path from "path";
 import { fileURLToPath } from 'url';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
 const saveStatisticsToFile = async () => {
     const currentDate = new Date().toLocaleDateString('ru-RU');
 
@@ -53,13 +55,9 @@ const saveStatisticsToFile = async () => {
 
     // Записываем обновленное содержимое в файл
     fs.writeFileSync('reports/statistics.csv', statsContent.trim(), 'utf8');
-    // Запуск функции раз в 10 секунд
 
-
-
-
-    // Архивация файла statistic
-    const MAX_FILE_SIZE = 500 * 1024; // 5 КБ в байтах
+    // Архивация файла statistics
+    const MAX_FILE_SIZE = 500 * 1024; // 500 КБ в байтах
     const statsFilePath = 'reports/statistics.csv';
 
     // Проверяем, существует ли файл
@@ -95,6 +93,7 @@ const saveStatisticsToFile = async () => {
     }
 
     // Сохраняем текущее состояние
+    statisticsManager.saveState();
     statisticsManager.saveState();
 };
 

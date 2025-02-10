@@ -57,9 +57,8 @@ const saveStatisticsToFile = () => __awaiter(void 0, void 0, void 0, function* (
     }
     // Записываем обновленное содержимое в файл
     fs.writeFileSync('reports/statistics.csv', statsContent.trim(), 'utf8');
-    // Запуск функции раз в 10 секунд
-    // Архивация файла statistic
-    const MAX_FILE_SIZE = 500 * 1024; // 5 КБ в байтах
+    // Архивация файла statistics
+    const MAX_FILE_SIZE = 500 * 1024; // 500 КБ в байтах
     const statsFilePath = 'reports/statistics.csv';
     // Проверяем, существует ли файл
     if (!fs.existsSync(statsFilePath)) {
@@ -89,6 +88,7 @@ const saveStatisticsToFile = () => __awaiter(void 0, void 0, void 0, function* (
         console.error('Ошибка при обработке файла:', err);
     }
     // Сохраняем текущее состояние
+    statisticsManager.saveState();
     statisticsManager.saveState();
 });
 export { saveStatisticsToFile };
