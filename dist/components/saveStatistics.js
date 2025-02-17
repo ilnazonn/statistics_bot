@@ -89,6 +89,5 @@ const saveStatisticsToFile = () => __awaiter(void 0, void 0, void 0, function* (
     }
     // Сохраняем текущее состояние
     statisticsManager.saveState();
-    statisticsManager.saveState();
 });
 export { saveStatisticsToFile };

@@ -94,7 +94,6 @@ const saveStatisticsToFile = async () => {
 
     // Сохраняем текущее состояние
     statisticsManager.saveState();
-    statisticsManager.saveState();
 };
 
 export {saveStatisticsToFile};
