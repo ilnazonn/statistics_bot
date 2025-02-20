@@ -67,17 +67,21 @@ class StatisticsManager {
     public loadState(): void {
         if (fs.existsSync(filePath)) {
             const data = fs.readFileSync(filePath, 'utf-8');
-            const state = JSON.parse(data);
-            this.messageCount = state.messageCount || 0;
-            this.outgoingMessageCount = state.outgoingMessageCount || 0;
-            this.groupMessageCount = state.groupMessageCount || 0;
-            this.lastDate = state.lastDate || '';
+            if (data.trim()) { // Проверяем, что файл не пустой
+                const state = JSON.parse(data);
+                this.messageCount = state.messageCount || 0; // Исправлено присваивание
+                this.outgoingMessageCount = state.outgoingMessageCount || 0; // Исправлено присваивание
+                this.groupMessageCount = state.groupMessageCount || 0; // Исправлено присваивание
+                this.lastDate = state.lastDate || ''; // Исправлено присваивание
+            } else {
+                this.saveState(); // Если файл пустой, инициализируем его
+            }
         } else {
-            this.saveState();
-        }
+            this.saveState(); // Если файл не существует, инициализируем его
+        } // Закрывающая фигурная скобка для loadState
     }
 
-    // Сохранение состояния в файл
+// Сохранение состояния в файл
     public saveState(): void {
         const state = {
             messageCount: this.messageCount,
@@ -88,5 +92,6 @@ class StatisticsManager {
         fs.writeFileSync(filePath, JSON.stringify(state), 'utf-8');
     }
 }
+
 
 export const statisticsManager = new StatisticsManager();
