@@ -178,16 +178,31 @@ const __dirname = dirname(__filename);
 // Переменная для хранения состояния ожидания ID пользователя и chatId
 let waitingForUserId: boolean = false;
 let targetChatId: number | null = null; // Идентификатор чата, где начался диалог
-
+let timeoutId: NodeJS.Timeout | null = null; // Идентификатор таймера
 // Функция для обработки команды "/add_user"
 bot.hears('/add_user', async (ctx: Context) => {
     const userId = ctx.from?.id;
-    const chatId = ctx.chat?.id; // chatId может быть number или undefined
+    const chatId = ctx.chat?.id;
 
     // Проверка, что userId определен и разрешен
     if (userId !== undefined && allowedUsers.includes(userId)) {
         waitingForUserId = true; // Устанавливаем флаг ожидания
         targetChatId = chatId ?? null; // Если chatId undefined, присваиваем null
+
+        // Устанавливаем таймаут на 60 секунд
+        if (timeoutId) {
+            clearTimeout(timeoutId); // Сбрасываем предыдущий таймаут, если он был
+        }
+
+        timeoutId = setTimeout(async () => {
+            if (waitingForUserId) {
+                waitingForUserId = false;
+                targetChatId = null;
+                console.log('Таймаут: диалог сброшен.');
+                await ctx.reply('Время ввода ID истекло. Пожалуйста, повторите команду /add_user.');
+            }
+        }, 60000); // 60 секунд
+
         await ctx.reply('Введите ID пользователя для добавления в env:');
     } else {
         await ctx.reply('У вас нет доступа к этой команде.');
@@ -195,10 +210,11 @@ bot.hears('/add_user', async (ctx: Context) => {
     }
 });
 
+
 // Обработка текстовых сообщений
 bot.on('message:text', async (ctx: Context, next) => {
     const messageText = ctx.message?.text;
-    const chatId = ctx.chat?.id; // chatId может быть number или undefined
+    const chatId = ctx.chat?.id;
 
     // Проверяем, что сообщение пришло из того же чата, где начался диалог
     if (waitingForUserId && chatId !== undefined && chatId === targetChatId) {
@@ -206,8 +222,14 @@ bot.on('message:text', async (ctx: Context, next) => {
             const userId = messageText;
             addUserToEnv(userId);
             await ctx.reply(`Пользователь с ID ${userId} добавлен в ALLOWED_USERS.`);
-            waitingForUserId = false; // Сбрасываем флаг ожидания
-            targetChatId = null; // Сбрасываем chatId
+
+            // Сбрасываем состояние и таймаут
+            waitingForUserId = false;
+            targetChatId = null;
+            if (timeoutId) {
+                clearTimeout(timeoutId); // Отменяем таймаут
+                timeoutId = null;
+            }
         } else if (waitingForUserId) {
             await ctx.reply('Пожалуйста, введите корректный ID пользователя (только числа).');
         }

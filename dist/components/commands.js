@@ -184,15 +184,28 @@ const __dirname = dirname(__filename);
 // Переменная для хранения состояния ожидания ID пользователя и chatId
 let waitingForUserId = false;
 let targetChatId = null; // Идентификатор чата, где начался диалог
+let timeoutId = null; // Идентификатор таймера
 // Функция для обработки команды "/add_user"
 bot.hears('/add_user', (ctx) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b;
     const userId = (_a = ctx.from) === null || _a === void 0 ? void 0 : _a.id;
-    const chatId = (_b = ctx.chat) === null || _b === void 0 ? void 0 : _b.id; // chatId может быть number или undefined
+    const chatId = (_b = ctx.chat) === null || _b === void 0 ? void 0 : _b.id;
     // Проверка, что userId определен и разрешен
     if (userId !== undefined && allowedUsers.includes(userId)) {
         waitingForUserId = true; // Устанавливаем флаг ожидания
         targetChatId = chatId !== null && chatId !== void 0 ? chatId : null; // Если chatId undefined, присваиваем null
+        // Устанавливаем таймаут на 60 секунд
+        if (timeoutId) {
+            clearTimeout(timeoutId); // Сбрасываем предыдущий таймаут, если он был
+        }
+        timeoutId = setTimeout(() => __awaiter(void 0, void 0, void 0, function* () {
+            if (waitingForUserId) {
+                waitingForUserId = false;
+                targetChatId = null;
+                console.log('Таймаут: диалог сброшен.');
+                yield ctx.reply('Время ввода ID истекло. Пожалуйста, повторите команду /add_user.');
+            }
+        }), 60000); // 60 секунд
         yield ctx.reply('Введите ID пользователя для добавления в env:');
     }
     else {
@@ -204,15 +217,20 @@ bot.hears('/add_user', (ctx) => __awaiter(void 0, void 0, void 0, function* () {
 bot.on('message:text', (ctx, next) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b;
     const messageText = (_a = ctx.message) === null || _a === void 0 ? void 0 : _a.text;
-    const chatId = (_b = ctx.chat) === null || _b === void 0 ? void 0 : _b.id; // chatId может быть number или undefined
+    const chatId = (_b = ctx.chat) === null || _b === void 0 ? void 0 : _b.id;
     // Проверяем, что сообщение пришло из того же чата, где начался диалог
     if (waitingForUserId && chatId !== undefined && chatId === targetChatId) {
         if (messageText && /^\d+$/.test(messageText)) {
             const userId = messageText;
             addUserToEnv(userId);
             yield ctx.reply(`Пользователь с ID ${userId} добавлен в ALLOWED_USERS.`);
-            waitingForUserId = false; // Сбрасываем флаг ожидания
-            targetChatId = null; // Сбрасываем chatId
+            // Сбрасываем состояние и таймаут
+            waitingForUserId = false;
+            targetChatId = null;
+            if (timeoutId) {
+                clearTimeout(timeoutId); // Отменяем таймаут
+                timeoutId = null;
+            }
         }
         else if (waitingForUserId) {
             yield ctx.reply('Пожалуйста, введите корректный ID пользователя (только числа).');
